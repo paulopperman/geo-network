@@ -8,27 +8,50 @@ buffersize = .00000000005  # set the buffer around the line to search for inters
 
 # get GeoDataFrame of linestrings
 gdf = gpd.read_file(file)
-intersections = gpd.GeoDataFrame(columns=['line1', 'line2','geometry'])  # geodataframe to store intersection points
-points = []
+
+# add column for the subgraph of each linestring
+gdf['graph'] = gdf.apply(lambda x: nx.Graph(), axis=1)
+
+# initialize the main graph
 G = nx.Graph()
 
-# populate coordinate lists for each element
-for i in range(0, len(gdf)):
-    points.append(list(gdf.iloc[i].geometry.coords))  # append the linestring
+# start a node counter
+next_node = 0
 
-# find intersection points
+# build the subgraphs for each line
 for m in range(0, len(gdf)):
-    s = gdf.iloc[m]
-    for n in range(m+1, len(gdf)):  # iterate through all the upcoming lines
-        t = gdf.iloc[n]
-        if t.geometry.intersects(s.geometry.buffer(buffersize)):  # check for intersection or near-touching
-            overlap = t.geometry.intersection(s.geometry.buffer(buffersize)).centroid()  # this will return a line, so get the center
-            where_on_s = s.geometry.project(overlap)  # find the distance along s where t intersects
-            intersection = s.geometry.interpolate(where_on_s)  # get the point on s where the intersection is
-            temp_gdf = gpd.GeoDataFrame([[m,n,intersection]],columns=['line1', 'line2','geometry'])  # build dataframe of intersection
-            intersections = intersections.append(temp_gdf,ignore_index=True)  # append interection to intersection list
+    s = gdf.iloc[m]  # placeholder for geometry analysis
+    # collect base nodes
+    pts = list(gdf.iloc[m].geometry.coords)
+    for p in pts:
+        gdf.graph.iloc[m].add_node(next_node, point=sh.geometry.Point(p))  # TODO: streamline with a placeholder graph so we're not selecting from gdf every time
+        G.add_node(next_node, point=sh.geometry.Point(p))
+        next_node = next_node+1
 
-# if the intersection is not on a line, it will be an endpoint
+    for n in range(m+1, len(gdf)):  # iterate through all the upcoming lines
+        t = gdf.iloc[n]  # placeholder for geometry analysis
+
+        if t.geometry.intersects(s.geometry.buffer(buffersize)):  # check for intersection or near-touching
+            overlap = t.geometry.intersection(s.geometry.buffer(buffersize))
+            end_buffer = t.geometry.length - (2*buffersize)  # calculate the buffer zone around the end of the line
+
+            # handle geomoetry collections, and turn everything into list of geometry
+            if overlap.geom_type == 'GeometryCollection':  # if multiple intersections were returned, make a list
+                overlap = list(overlap)
+            else:  # else convert to a single element list
+                overlap = [overlap]
+
+            # get a representative point for the geometry and add nodes to graphs
+            for o in overlap:
+                o_pt = o.representative_point()  # FIXME: this will result in some weird and close node placements if intersection is an endpoint (clean up big graph?)
+                o_proj = s.geometry.project(o_pt)
+                int_point = s.geometry.interpolate(o_proj)
+                gdf.graph.iloc[m].add_node(next_node, point=int_point)
+                gdf.graph.iloc[n].add_node(next_node, point=int_point)
+                G.add_node(next_node, point=int_point)
+                next_node = next_node+1
+
+    # compute edge distances
 
 
 
