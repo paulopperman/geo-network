@@ -10,7 +10,7 @@ buffersize = .00000000005  # set the buffer around the line to search for inters
 gdf = gpd.read_file(file)
 
 # add column for the subgraph of each linestring
-gdf['graph'] = gdf.apply(lambda x: nx.Graph(), axis=1)
+gdf['graph'] = gdf.apply(lambda x: {}, axis=1)
 
 # initialize the main graph
 G = nx.Graph()
@@ -24,8 +24,7 @@ for m in range(0, len(gdf)):
     # collect base nodes
     pts = list(gdf.iloc[m].geometry.coords)
     for p in pts:
-        gdf.graph.iloc[m].add_node(next_node, point=sh.geometry.Point(p))  # TODO: streamline with a placeholder graph so we're not selecting from gdf every time
-        G.add_node(next_node, point=sh.geometry.Point(p))
+        gdf.graph.iloc[m][next_node] = sh.geometry.Point(p)  # TODO: streamline with a placeholder graph so we're not selecting from gdf every time
         next_node = next_node+1
 
     for n in range(m+1, len(gdf)):  # iterate through all the upcoming lines
@@ -46,12 +45,12 @@ for m in range(0, len(gdf)):
                 o_pt = o.representative_point()  # FIXME: this will result in some weird and close node placements if intersection is an endpoint (clean up big graph?)
                 o_proj = s.geometry.project(o_pt)
                 int_point = s.geometry.interpolate(o_proj)
-                gdf.graph.iloc[m].add_node(next_node, point=int_point)
-                gdf.graph.iloc[n].add_node(next_node, point=int_point)
-                G.add_node(next_node, point=int_point)
+                gdf.graph.iloc[m][next_node] = int_point
+                gdf.graph.iloc[n][next_node] = int_point
                 next_node = next_node+1
 
     # compute edge distances
+
 
 
 
