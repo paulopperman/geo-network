@@ -17,6 +17,8 @@ gdf['edges'] = np.empty((len(gdf), 0)).tolist()
 # initialize the main graph
 G = nx.Graph()
 
+node_dict = {}
+
 # start a node counter
 next_node = 0
 
@@ -60,12 +62,7 @@ for m in range(0, len(gdf)):
         edge_length = subg.iloc[r]['point'].distance(subg.iloc[r+1]['point'])  # distance to the next point
         gdf.iloc[m].edges.append((ordered_points[r],ordered_points[r+1],{'length':edge_length}))
 
+    for _ in gdf.nodes.iloc[m].keys():
+        G.add_node(_, point=gdf.nodes.iloc[m].get(_)['point'])
 
-
-
-
-
-
-# gdf.iloc[0].geometry.project(gdf.iloc[2].geometry.intersection(gdf.iloc[0].geometry))
-# gdf.iloc[0].geometry.interpolate(gdf.iloc[0].geometry.project(gdf.iloc[2].geometry.intersection(gdf.iloc[0].geometry))_
-
+    G.add_edges_from(gdf.edges.iloc[m])
