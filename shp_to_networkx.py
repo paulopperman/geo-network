@@ -6,12 +6,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
-file = "./test-geometry/test-geometry.shp"
+#file = "./test-geometry/test-geometry.shp"
+file = "../../Datasets/sidewalk-map/npt-sidewalks/npt-sidewalks.shp"
 
 buffersize = .00000000005  # set the buffer around the line to search for intersections.  should be < 1e-6
 
 # get GeoDataFrame of linestrings
 gdf = gpd.read_file(file)
+
+# TODO: filter out 'NoneType' geometries from the input.  They break things.
+# test case to fix sidewalk map
+gdf = gdf.drop(300)
 
 # add column for the subgraph of each linestring
 gdf['nodes'] = gdf.apply(lambda x: {}, axis=1)
@@ -28,8 +33,16 @@ next_node = 0
 # build the subgraphs for each line
 for m in range(0, len(gdf)):
     s = gdf.iloc[m]  # placeholder for geometry analysis
+    pts = []
     # collect base nodes
-    pts = list(gdf.iloc[m].geometry.coords)
+
+    # FIXME: this multilinestring geometry check is a hack to overcome what appears to be a non-issue. need to figure something better to handle geometry types
+    if gdf.iloc[m].geometry.geom_type == "MultiLineString":
+        geom = list(gdf.iloc[m].geometry)
+    else:
+        geom = [gdf.iloc[m].geometry]
+    for _ in geom:
+        pts.extend(list(_.coords))
     for p in pts:
         point = sh.geometry.Point(p)
         dist = s.geometry.project(point)
