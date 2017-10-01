@@ -3,6 +3,9 @@ import shapely as sh
 import networkx as nx
 import numpy as np
 
+import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
+
 file = "./test-geometry/test-geometry.shp"
 
 buffersize = .00000000005  # set the buffer around the line to search for intersections.  should be < 1e-6
@@ -15,7 +18,7 @@ gdf['nodes'] = gdf.apply(lambda x: {}, axis=1)
 gdf['edges'] = np.empty((len(gdf), 0)).tolist()
 
 # initialize the main graph
-G = nx.Graph()
+G = nx.MultiDiGraph()
 
 node_dict = {}
 
@@ -66,3 +69,48 @@ for m in range(0, len(gdf)):
         G.add_node(_, point=gdf.nodes.iloc[m].get(_)['point'])
 
     G.add_edges_from(gdf.edges.iloc[m])
+
+
+# Plot the graph - borrowing from osmnx.plot.plot_graph() - https://github.com/gboeing/osmnx/blob/master/osmnx/plot.py#L348
+
+fig_height = 6
+bgcolor = 'w'
+edge_color = '#999999'
+edge_linewidth = 1
+edge_alpha = 1
+margin = 0.02
+
+west, south, east, north = gdf.total_bounds
+
+bbox_aspect_ratio = (north-south)/(east-west)
+fig_width = fig_height/bbox_aspect_ratio
+
+node_Xs = [float(pt['point'].x) for _, pt in G.nodes(data='point')]
+node_Ys = [float(pt['point'].y) for _, pt in G.nodes(data='point')]
+
+# create the figure and axis
+fig, ax = plt.subplots(figsize=(fig_width, fig_height), facecolor=bgcolor)
+ax.set_facecolor(bgcolor)
+
+lines = []
+
+# draw edges as lines from node to node
+for u, v, data in G.edges(keys=False, data=True):
+    x1 = G.node[u]['point'].x
+    y1 = G.node[u]['point'].y
+    x2 = G.node[v]['point'].x
+    y2 = G.node[v]['point'].y
+    line = [(x1, y1), (x2, y2)]
+    lines.append(line)
+
+# add lines to linecollections
+lc = LineCollection(lines, colors=edge_color, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
+ax.add_collection(lc)
+
+ax.scatter(node_Xs, node_Ys)
+
+# set the extent of the figure
+margin_ns = (north - south) * margin
+margin_ew = (east - west) * margin
+ax.set_ylim((south - margin_ns, north + margin_ns))
+ax.set_xlim((west - margin_ew, east + margin_ew))
