@@ -9,6 +9,7 @@ from matplotlib.collections import LineCollection
 #file = "./test-geometry/test-geometry.shp"
 file = "../../Datasets/sidewalk-map/npt-sidewalks/npt-sidewalks.shp"
 
+
 buffersize = .00000000005  # set the buffer around the line to search for intersections.  should be < 1e-6
 
 # get GeoDataFrame of linestrings
@@ -98,8 +99,8 @@ west, south, east, north = gdf.total_bounds
 bbox_aspect_ratio = (north-south)/(east-west)
 fig_width = fig_height/bbox_aspect_ratio
 
-node_Xs = [float(pt['point'].x) for _, pt in G.nodes(data='point')]
-node_Ys = [float(pt['point'].y) for _, pt in G.nodes(data='point')]
+node_Xs = [float(pt.x) for _, pt in G.nodes(data='point')]
+node_Ys = [float(pt.y) for _, pt in G.nodes(data='point')]
 
 # create the figure and axis
 fig, ax = plt.subplots(figsize=(fig_width, fig_height), facecolor=bgcolor)
