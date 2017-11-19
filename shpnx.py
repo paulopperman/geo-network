@@ -1,6 +1,7 @@
 import geopandas as gpd
 import shapely as sh
 import networkx as nx
+import osmnx as ox
 import numpy as np
 
 def get_graph_from_gdf(gdf, find_intersections=True, intersection_buffersize=0.00000000005):
@@ -18,8 +19,10 @@ def get_graph_from_gdf(gdf, find_intersections=True, intersection_buffersize=0.0
     gdf['nodes'] = gdf.apply(lambda x: {}, axis=1)
     gdf['edges'] = np.empty((len(gdf), 0)).tolist()
 
+    crs = gdf.crs
+
     # initialize the main graph
-    G = nx.MultiDiGraph()
+    G = nx.MultiDiGraph(data=None, crs=crs, name=None)
 
     node_dict = {}
 
@@ -78,5 +81,35 @@ def get_graph_from_gdf(gdf, find_intersections=True, intersection_buffersize=0.0
             G.add_node(_, point=gdf.nodes.iloc[m].get(_)['point'])
 
         G.add_edges_from(gdf.edges.iloc[m])
+
+    return G
+
+
+def get_xy_from_shape_graph(gdf, find_intersections=True, intersection_buffersize=0.00000000005):
+    """
+    Generate a networkx graph formatted to work with osmnx
+    :param find_intersections: detect intersections of linestrings
+    :param intersection_buffersize:
+    :return: networkx graph with x,y so it works with osmnx
+    """
+
+    # Convert the shapefile to a network
+    G = get_graph_from_gdf(gdf, find_intersections=find_intersections, intersection_buffersize=intersection_buffersize)
+
+    # extrat a dict of the point attributes
+    points = nx.get_node_attributes(G, 'point')
+
+    # build lists of x and y attributes from the points
+    #attr_x = [p.x for p in points.values()]
+    #attr_y = [p.y for p in points.values()]
+    attrs = [{'x': p.x, 'y': p.y} for p in points.values()]
+
+    #for x, y, i in [list(zip(attr_x, attr_y, list(points.keys())))]:
+    #    sub_dict = {'x': x, 'y': y}
+    #    attr_dict[i] = sub_dict
+
+    attr_dict= dict(zip(points.keys(), attrs))
+    # add x and y attributes to each point
+    nx.set_node_attributes(G, attr_dict)
 
     return G
