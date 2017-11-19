@@ -9,7 +9,7 @@ def get_graph_from_gdf(gdf, find_intersections=True, intersection_buffersize=0.0
     :param gdf: The geodataframe containing linestrings
     :param find_intersections: detect intersections of linestrings (default True)
     :param intersection_buffersize: Set the tolerance around the linestrings to detect intersections
-    :return:
+    :return: networkx MultiDiGraph of the gdf
     """
     # drop empty geometries
     gdf = gdf.drop(gdf[gdf.geometry.values == None].index)
